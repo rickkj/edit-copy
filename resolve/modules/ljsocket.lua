@@ -18,6 +18,11 @@ ffi.cdef[[
         char *lpVendorInfo;
     } WSADATA;
 
+    typedef struct sockaddr {
+        unsigned short sa_family;
+        char sa_data[14];
+    } sockaddr;
+
     typedef struct {
         short sin_family;
         unsigned short sin_port;
@@ -27,7 +32,7 @@ ffi.cdef[[
         char sin_zero[8];
     } sockaddr_in;
 
-    typedef struct {
+    typedef struct addrinfo {
         int ai_flags;
         int ai_family;
         int ai_socktype;
@@ -78,14 +83,12 @@ local IPPROTO_TCP_LEVEL = 6
 local FIONBIO = 0x8004667E
 
 function M.find_first_address(host, service, options)
-    local hints = ffi.new("addrinfo[1]")
-    hints[0].ai_family = AF_INET
-    hints[0].ai_socktype = SOCK_STREAM
-    hints[0].ai_protocol = IPPROTO_TCP
+    local hints = ffi.new("struct addrinfo")
+    hints.ai_family = AF_INET
+    hints.ai_socktype = SOCK_STREAM
+    hints.ai_protocol = IPPROTO_TCP
     
-    print("[EditCOPY ljsocket] hints:", tostring(hints))
-    local res = ffi.new("addrinfo*[1]")
-    print("[EditCOPY ljsocket] out:", tostring(res))
+    local res = ffi.new("struct addrinfo*[1]")
     local status = ws2.getaddrinfo(host, tostring(service), hints, res)
     
     if status ~= 0 then
@@ -160,7 +163,7 @@ function Socket:accept()
     local client_s = ws2.accept(self.s, ffi.cast("struct sockaddr*", addr), addrlen)
     
     if client_s == -1 or client_s == 18446744073709551615 then 
-        return nil, "timeout" -- Simplified for ljsocket pattern
+        return nil, "timeout"
     end
 
     return setmetatable({s = client_s}, Socket)
@@ -203,8 +206,5 @@ end
 function Socket:close()
     ws2.closesocket(self.s)
 end
-
--- Compat check
-M.bind = function(...) error("Use find_first_address and create instead") end
 
 return M
