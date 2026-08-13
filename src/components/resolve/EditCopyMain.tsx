@@ -5,7 +5,7 @@ import { Settings } from './Settings';
 import { Footer } from './Footer';
 import { ImageItem } from '@/types/resolve';
 import { toast } from 'sonner';
-import { pingResolve, getTimelineInfo, applyImages } from '@/api/resolve-api';
+import { pingResolve, getTimelineInfo } from '@/api/resolve-api';
 import { processClipboardImage } from '@/api/clipboard';
 
 export function EditCopyMain() {
@@ -101,19 +101,7 @@ export function EditCopyMain() {
       <Footer 
         status={status} 
         onApply={async () => {
-          setIsApplying(true);
-          const paths = images.map(img => img.path);
-          const res = await applyImages(paths, settings.duration, settings.track);
-          
-          if (res.ok) {
-            toast.success("Imagens aplicadas com sucesso!");
-            setImages([]);
-          } else {
-            toast.error("Erro ao aplicar imagens", {
-              description: res.error
-            });
-          }
-          setIsApplying(false);
+          toast.info("A funcionalidade Apply será implementada na próxima etapa.");
         }} 
         canApply={images.length > 0 && status === 'Connected' && !isApplying}
       />

@@ -1,66 +1,77 @@
-use serde::{Deserialize, Serialize};
-use tauri::{command, AppHandle, Runtime};
 use reqwest::Client;
+use serde::Deserialize;
+use serde_json::Value;
 use std::time::Duration;
+use tauri::command;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BridgePayload {
-    pub func: String,
-    #[serde(flatten)]
-    pub data: serde_json::Value,
-}
+const RESOLVE_ENDPOINT: &str = "http://127.0.0.1:56002/";
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BridgeResponse {
-    pub ok: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub detail: Option<String>,
-    pub func: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub data: Option<serde_json::Value>,
+#[derive(Debug, Deserialize)]
+pub struct ResolveBridgeArgs {
+    pub payload: Value,
+
+    #[serde(default, rename = "timeoutSecs")]
+    pub timeout_secs: Option<u64>,
 }
 
 #[command]
-pub async fn resolve_bridge<R: Runtime>(
-    _app: AppHandle<R>,
-    payload: BridgePayload,
-    timeout_secs: Option<u64>,
-) -> Result<serde_json::Value, String> {
+pub async fn resolve_bridge(
+    args: ResolveBridgeArgs,
+) -> Result<String, String> {
+
+    let timeout_secs = args.timeout_secs.unwrap_or(15);
+
     let client = Client::builder()
-        .timeout(Duration::from_secs(timeout_secs.unwrap_or(15)))
+        .connect_timeout(Duration::from_secs(3))
         .build()
-        .map_err(|e| format!("Erro ao criar cliente HTTP: {}", e))?;
+        .map_err(|e| format!("Falha ao criar cliente HTTP: {}", e))?;
 
-    let url = "http://127.0.0.1:56002/";
-
-    println!("[Resolve Bridge] Chamando {} no Resolve...", payload.func);
+    println!(
+        "[EditCOPY Bridge] POST {} func={:?}",
+        RESOLVE_ENDPOINT,
+        args.payload.get("func")
+    );
 
     let response = client
-        .post(url)
-        .json(&payload)
+        .post(RESOLVE_ENDPOINT)
+        .header("Content-Type", "application/json")
+        .timeout(Duration::from_secs(timeout_secs))
+        .json(&args.payload)
         .send()
         .await
         .map_err(|e| {
             if e.is_connect() {
-                "DaVinci Resolve não está conectado ou o script EditCOPY não foi iniciado.".to_string()
+                "DaVinci Resolve não está conectado. Abra o Resolve e execute Workspace → Scripts → EditCOPY.".to_string()
             } else if e.is_timeout() {
-                "Tempo limite de conexão esgotado.".to_string()
+                format!(
+                    "DaVinci Resolve não respondeu dentro de {} segundos.",
+                    timeout_secs
+                )
             } else {
-                format!("Erro de conexão: {}", e)
+                format!("Erro de conexão com DaVinci Resolve: {}", e)
             }
         })?;
 
     let status = response.status();
+
+    let body = response
+        .text()
+        .await
+        .map_err(|e| format!("Falha ao ler resposta do Resolve: {}", e))?;
+
+    println!(
+        "[EditCOPY Bridge] HTTP {} body={}",
+        status.as_u16(),
+        body
+    );
+
     if !status.is_success() {
-        return Err(format!("Servidor Resolve retornou erro HTTP {}", status));
+        return Err(format!(
+            "Servidor Lua retornou HTTP {}: {}",
+            status.as_u16(),
+            body
+        ));
     }
 
-    let res_body: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| format!("Resposta do Resolve não é um JSON válido: {}", e))?;
-
-    Ok(res_body)
+    Ok(body)
 }
