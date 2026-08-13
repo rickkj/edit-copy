@@ -120,14 +120,36 @@ print("[EditCOPY Lua] socket.create OK")
 -- MUDANÇA V14: REMOVER set_blocking(false) para evitar erro ioctlsocket
 -- assert(test_server:set_blocking(false))
 
+
+-- MUDANÇA V15: A porta 56003 retornou erro 10013 (Access Denied/Already in use).
+-- Vamos tentar a porta 56005, que é menos provável de estar em conflito.
+local ALTERNATIVE_PORT = 56005
+
+print("[EditCOPY Lua] Tentando bind na porta " .. ALTERNATIVE_PORT)
+
+-- Recriar test_info com a nova porta
+local test_info_alt, test_err_alt = socket.find_first_address("127.0.0.1", ALTERNATIVE_PORT)
+if not test_info_alt then
+    error("[EditCOPY Lua] find_first_address falhou na porta alternativa: " .. tostring(test_err_alt))
+end
+
 assert(test_server:set_option("nodelay", true, "tcp"))
 assert(test_server:set_option("reuseaddr", true))
-assert(test_server:bind(test_info))
-assert(test_server:listen())
 
-print("[EditCOPY Lua] TCP server pronto em 127.0.0.1:56003")
+local bind_ok, bind_err = test_server:bind(test_info_alt)
+if not bind_ok then
+    error(
+        "[EditCOPY Lua] Bind failed na porta " .. ALTERNATIVE_PORT .. ": "
+        .. tostring(bind_err)
+        .. "\nCertifique-se que o Firewall não está bloqueando ou a porta não está em uso."
+    )
+end
+
+assert(test_server:listen())
+print("[EditCOPY Lua] TCP server pronto em 127.0.0.1:" .. ALTERNATIVE_PORT)
 
 test_server:close()
+
 
 
 -- Carregamento do core do EditCOPY

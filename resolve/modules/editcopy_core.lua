@@ -6,7 +6,7 @@ local EditCopy = {}
 local handlers = {}
 local server = nil
 local HOST = "127.0.0.1"
-local PORT = 56003
+local PORT = 56005
 
 local function create_response(body)
     local header =
