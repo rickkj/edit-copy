@@ -1,76 +1,78 @@
 # EditCOPY - DaVinci Resolve Integration
 
-Este aplicativo especializado permite capturar imagens do clipboard do Windows e inseri-las automaticamente na timeline do DaVinci Resolve via uma ponte segura em Rust e um servidor local em Lua.
+Este guia explica como configurar e rodar o EditCOPY para integrar o clipboard do Windows diretamente com a timeline do DaVinci Resolve.
 
 ---
 
-## 🛠️ Comandos do Desenvolvedor (NPM)
+## 🛠️ Guia Rápido de Comandos (Terminal)
 
-Para facilitar o desenvolvimento e build do aplicativo desktop, utilize os seguintes comandos no terminal:
+Siga esta ordem exata para configurar e rodar o projeto pela primeira vez:
 
-- `npm run tauri:dev`: Inicia o aplicativo em modo de desenvolvimento (Hot Reload).
-- `npm run tauri:build`: Gera o executável de produção (.exe) para Windows.
-- `npm run tauri:clean`: Limpa os arquivos temporários de build do Rust/Cargo.
-- `npm run resolve:install`: Instala automaticamente os scripts Lua na pasta correta do DaVinci Resolve (Windows).
-- `npm run resolve:test`: Testa se o servidor Lua no DaVinci Resolve está respondendo.
+### 1. Instalação de Dependências
+Instale as bibliotecas necessárias para o frontend e o motor Tauri:
+```bash
+npm install
+```
 
----
-
-## 🚀 Guia de Instalação e Configuração
-
-Para que a integração funcione, você precisa configurar o DaVinci Resolve para aceitar comandos do EditCOPY.
-
-### 1. Requisitos Prévios
-- **DaVinci Resolve** instalado.
-- **Python** (opcional, mas recomendado para algumas APIs do Resolve).
-- No DaVinci Resolve, vá em `Preferences` -> `System` -> `General` e certifique-se de que **"External scripting using"** está definido como **"Local"** ou **"Network"**.
-
-### 2. Instalação dos Scripts Lua
-
-Você pode instalar os scripts automaticamente ou manualmente:
-
-**Opção A: Automatizada (Recomendada)**
-No terminal do projeto, execute:
+### 2. Instalação do Plugin no DaVinci Resolve
+Este comando copia automaticamente os scripts Lua necessários para a pasta de scripts do DaVinci Resolve no seu Windows:
 ```bash
 npm run resolve:install
 ```
 
-**Opção B: Manual**
-Copie o conteúdo da pasta `resolve/` deste projeto para:
-`%AppData%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Comp\`
-
-**Estrutura esperada:**
-```text
-Comp/
-├── EditCOPY.lua
-├── modules/
-│   └── editcopy_core.lua
-└── deps/
-    └── dkjson.lua
+### 3. Iniciar o Aplicativo (Modo Desenvolvimento)
+Compila e abre a interface do EditCOPY. Na primeira execução, o Rust fará o download das dependências e compilará o core (isso pode levar alguns minutos):
+```bash
+npm run tauri:dev
 ```
 
-### 3. Como Iniciar e Testar a Integração
-1. Abra o **DaVinci Resolve**.
-2. No menu superior, vá em: **Workspace** -> **Scripts** -> **EditCOPY**.
-3. No console do Resolve, você verá: `[EditCOPY Lua] Listening on 127.0.0.1:56002`.
-4. **Validar via Terminal:** Execute o comando abaixo para confirmar que o Resolve está respondendo:
-   ```bash
-   npm run resolve:test
-   ```
-   Você deve receber uma resposta JSON: `{"ok": true, "message": "Pong"}`.
-5. Agora, abra o aplicativo **EditCOPY** para começar a usar.
+### 4. Testar Conexão com o Resolve
+Após iniciar o script dentro do DaVinci Resolve (veja seção abaixo), você pode testar a comunicação HTTP via terminal:
+```bash
+npm run resolve:test
+```
 
 ---
 
-## 🏗️ Arquitetura Técnica (4 Camadas)
+## 🚀 Passo a Passo: Configuração do DaVinci Resolve
 
-1.  **Interface (React/TS):** Gerencia a fila de imagens e o estado da conexão.
-2.  **Ponte (Tauri/IPC):** Canal de comunicação seguro entre o frontend e o sistema operacional.
-3.  **Backend (Rust):** Proxy transparente que envia requisições HTTP POST para o servidor Lua local.
-4.  **Integração (Lua Server):** Script rodando dentro do DaVinci Resolve que executa comandos via **Scripting API**.
+Para que a integração funcione, você deve ativar o servidor Lua dentro do Resolve:
+
+1.  **Configuração de Scripting:**
+    - Abra o DaVinci Resolve.
+    - Vá em `Preferences` -> `System` -> `General`.
+    - Defina **"External scripting using"** como **"Local"**.
+    - Salve e reinicie o Resolve se necessário.
+
+2.  **Ativar o Servidor EditCOPY:**
+    - Com o Resolve aberto, vá no menu superior: `Workspace` -> `Scripts` -> `EditCOPY`.
+    - **Dica:** O console do Resolve (que abre automaticamente ou via `Workspace` -> `Console`) mostrará a mensagem: `[EditCOPY Lua] Listening on 127.0.0.1:56002`.
+
+3.  **Uso:**
+    - Com o script rodando no Resolve e o App EditCOPY aberto, qualquer imagem copiada (PrintScreen, Snipping Tool, Copiar Imagem no Navegador) aparecerá na fila do app e poderá ser inserida na timeline.
 
 ---
 
-## 📝 Notas Importantes
-- O servidor Lua utiliza a porta **56002**. Certifique-se de que não há firewalls bloqueando conexões locais nesta porta.
-- Se o status no app for "Disconnected", certifique-se de que o script `EditCOPY` foi iniciado dentro do DaVinci Resolve.
+## 📋 Lista Completa de Comandos
+
+| Comando | Descrição |
+| :--- | :--- |
+| `npm install` | Instala dependências do Node.js. |
+| `npm run tauri:dev` | Inicia o app em modo de desenvolvimento. |
+| `npm run tauri:build` | Gera o instalador `.exe` de produção. |
+| `npm run tauri:clean` | Limpa o cache de build do Rust (útil se houver erros de compilação). |
+| `npm run resolve:install` | Instala os scripts Lua no diretório do Resolve. |
+| `npm run resolve:test` | Valida se o servidor Lua está ativo e respondendo. |
+
+---
+
+## 🏗️ Estrutura Técnica
+- **Frontend:** React + Tailwind + TanStack Router.
+- **Desktop:** Tauri 2 (Rust).
+- **Integração:** Servidor HTTP em Lua rodando via DaVinci Scripting API na porta `56002`.
+
+---
+
+## ⚠️ Solução de Problemas
+- **Erro de Build (Ícones):** Se o build falhar reclamando de `icon.ico`, certifique-se de que a pasta `src-tauri/icons` contém os arquivos gerados.
+- **"Failed to connect":** O erro `curl: (7)` no `resolve:test` significa que o script `EditCOPY` não foi iniciado dentro do menu `Workspace -> Scripts` do DaVinci Resolve.
