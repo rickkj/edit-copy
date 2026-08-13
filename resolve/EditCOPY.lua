@@ -1,76 +1,53 @@
--- EditCOPY Launcher para DaVinci Resolve
--- Configura caminhos e inicia o servidor HTTP
+local SCRIPT_DIR = debug.getinfo(1, "S").source:sub(2)
 
-local PORT = 56002
+local separator = package.config:sub(1, 1)
 
--- 1. Determinar diretório real do script
-local function get_script_path()
-    local info = debug.getinfo(1, "S")
-    local path = info.source:sub(2) -- Remove o '@' inicial
-    return path:match("(.*[/\\])") or ""
-end
+SCRIPT_DIR = SCRIPT_DIR:match("^(.*)" .. separator .. "[^" .. separator .. "]+$") or "."
 
-local script_dir = get_script_path()
-print("[EditCOPY Lua] Script directory: " .. script_dir)
+package.path =
+    SCRIPT_DIR
+    .. separator
+    .. "?.lua;"
+    .. SCRIPT_DIR
+    .. separator
+    .. "?/init.lua;"
+    .. package.path
 
--- 2. Configurar package.path para incluir subdiretórios
-package.path = package.path .. ";" .. script_dir .. "?.lua"
-package.path = package.path .. ";" .. script_dir .. "modules/?.lua"
-package.path = package.path .. ";" .. script_dir .. "deps/?.lua"
+local MODULE_DIR = SCRIPT_DIR .. separator .. "modules"
 
--- 3. Carregar dependências e core
-local status_json, json = pcall(require, "dkjson")
-if not status_json then
-    -- Fallback se dkjson estiver na pasta deps
-    status_json, json = pcall(require, "deps.dkjson")
-end
+package.path =
+    MODULE_DIR
+    .. separator
+    .. "?.lua;"
+    .. package.path
 
-local status_socket, socket = pcall(require, "socket")
-if not status_socket then
-    print("[EditCOPY Lua] ERRO CRÍTICO: LuaSocket não encontrado. Certifique-se que o plugin foi instalado corretamente.")
+local DEPS_DIR =
+    SCRIPT_DIR .. separator .. "deps"
+
+package.path =
+    DEPS_DIR .. separator .. "?.lua;"
+    .. package.path
+
+print("[EditCOPY Lua] Iniciando...")
+
+local ok, EditCopy = pcall(require, "editcopy_core")
+
+if not ok then
+    print("[EditCOPY Lua] ERRO ao carregar editcopy_core:")
+    print(tostring(EditCopy))
     return
 end
 
-local status_core, core = pcall(require, "modules.editcopy_core")
-if not status_core then
-    print("[EditCOPY Lua] ERRO CRÍTICO ao carregar editcopy_core: " .. tostring(core))
+local ok_start, err = pcall(function()
+    EditCopy.start_server(56002)
+end)
+
+if not ok_start then
+    print("[EditCOPY Lua] ERRO ao iniciar servidor:")
+    print(tostring(err))
     return
 end
 
--- 4. Iniciar Servidor (evitando múltiplos servidores)
-local server, err = socket.bind("127.0.0.1", PORT)
-if not server then
-    -- Tenta verificar se já existe um servidor EditCOPY rodando
-    local client = socket.tcp()
-    client:settimeout(1)
-    if client:connect("127.0.0.1", PORT) then
-        print("[EditCOPY Lua] Servidor já está rodando na porta " .. PORT .. ". Reutilizando conexão.")
-        client:close()
-        return
-    else
-        print("[EditCOPY Lua] Erro ao iniciar servidor: " .. tostring(err))
-        return
-    end
-end
+print("[EditCOPY Lua] Servidor iniciado em 127.0.0.1:56002")
 
-server:settimeout(0.1)
-print("[EditCOPY Lua] Servidor HTTP iniciado em 127.0.0.1:" .. PORT)
-
--- Loop principal (o Resolve executa scripts de forma síncrona, 
--- mas podemos rodar um loop com timeout se necessário para o MVP)
--- NOTA: Em ambiente Resolve, scripts de UI costumam ter um loop próprio.
--- Para o MVP funcional, vamos rodar um loop que processa requisições.
-
-local running = true
-while running do
-    local client, accept_err = server:accept()
-    if client then
-        core.handle_request(client)
-        client:close()
-    elseif accept_err ~= "timeout" then
-        print("[EditCOPY Lua] Accept error: " .. tostring(accept_err))
-    end
-    
-    -- Pequena pausa para não consumir 100% da CPU se o Resolve permitir
-    socket.sleep(0.01)
-end
+EditCopy.run()

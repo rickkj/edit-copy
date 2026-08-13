@@ -1,9 +1,14 @@
-export interface ResolveResponse<T = any> {
+export interface ResolveResponse<T = unknown> {
   ok: boolean;
+  func?: string;
   error?: string;
   detail?: string;
-  func?: string;
   data?: T;
+}
+
+export interface ResolveInfo {
+  product: string;
+  version: string;
 }
 
 export interface TimelineInfo {
@@ -12,11 +17,6 @@ export interface TimelineInfo {
   currentTimecode: string;
   duration: string;
   videoTrackCount: number;
-}
-
-export interface ResolveInfo {
-  product: string;
-  version: string;
 }
 
 export interface ImageItem {
