@@ -17,11 +17,13 @@ export async function callResolve<T = unknown>(
     const raw = await invoke<string>(
       "resolve_bridge",
       {
-        payload: {
-          ...payload,
-          func,
+        args: {
+          payload: {
+            ...payload,
+            func,
+          },
+          timeoutSecs,
         },
-        timeoutSecs,
       }
     );
 
