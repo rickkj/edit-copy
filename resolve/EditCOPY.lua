@@ -74,21 +74,12 @@ print(
     "[EditCOPY Lua] ljsocket carregado com sucesso."
 )
 
--- Teste de bind do ljsocket
-local testSocket, err =
-    socket_lib.bind("127.0.0.1", 56003)
-
-if not testSocket then
-    print(
-        "[EditCOPY Lua] ERRO: Falha ao abrir 127.0.0.1:56003: "
-        .. tostring(err)
-    )
-    return
-end
-testSocket:close()
+-- Validação de ljsocket concluída.
+-- (Removido teste de bind manual aqui para evitar conflito com o core)
 print(
-    "[EditCOPY Lua] TCP server (ljsocket) pronto em 127.0.0.1:56003"
+    "[EditCOPY Lua] ljsocket validado e pronto."
 )
+
 
 
 -- Carregamento do core do EditCOPY
