@@ -63,25 +63,25 @@ print(
     "[EditCOPY Lua] dkjson carregado."
 )
 
--- Validação de LuaSocket
+-- Validação de ljsocket
 local ok_socket, socket_lib =
     pcall(
         require,
-        "socket"
+        "ljsocket"
     )
 
 if not ok_socket then
     print(
-        "[EditCOPY Lua] ERRO: dependência LuaSocket não encontrada.\nDetalhes: "
+        "[EditCOPY Lua] ERRO: ljsocket não carregou.\nDetalhes: "
         .. tostring(socket_lib)
     )
     return
 end
 print(
-    "[EditCOPY Lua] LuaSocket carregado."
+    "[EditCOPY Lua] ljsocket carregado com sucesso."
 )
 
--- Teste de bind do LuaSocket
+-- Teste de bind do ljsocket
 local testSocket, err =
     socket_lib.bind("127.0.0.1", 56003)
 
@@ -94,7 +94,7 @@ if not testSocket then
 end
 testSocket:close()
 print(
-    "[EditCOPY Lua] Teste de bind do LuaSocket: PASS."
+    "[EditCOPY Lua] Bind TCP realizado com sucesso em 127.0.0.1:56003"
 )
 
 -- Carregamento do core do EditCOPY
@@ -128,7 +128,7 @@ if not ok_start then
 end
 
 print(
-    "[EditCOPY Lua] Listening on 127.0.0.1:56003"
+    "[EditCOPY Lua] HTTP server listening on 127.0.0.1:56003"
 )
 
 -- Rodar servidor
