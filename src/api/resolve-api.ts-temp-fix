@@ -1,0 +1,3 @@
+import { command } from "@tauri-apps/api/core"; // Note: In v2 it's often imported from @tauri-apps/api/core but let's check current pattern
+
+// Note: Re-checking resolve-api.ts and EditCopyMain for lint errors reported earlier
