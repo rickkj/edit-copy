@@ -10,7 +10,7 @@
     "tauri:build": "tauri build",
     "tauri:clean": "cargo clean --manifest-path src-tauri/Cargo.toml && rimraf src-tauri/target",
     "resolve:install": "node scripts/install-resolve-scripts.js",
-    "resolve:test": "curl -X POST http://127.0.0.1:56002/ -H \"Content-Type: application/json\" -d '{\"action\": \"Ping\"}'",
+    "resolve:test": "curl -X POST http://127.0.0.1:56002/ -H \"Content-Type: application/json\" -d \"{\\\"func\\\": \\\"Ping\\\"}\"",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",

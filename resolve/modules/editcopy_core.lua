@@ -188,12 +188,16 @@ function EditCopy.handle_request(
         json.decode(body)
 
     if not data then
+        -- Tentar limpar caracteres extras (espaços, tabs, quebras de linha) se falhar
+        local clean_body = body:match("^%s*(.-)%s*$")
+        data, _, decode_error = json.decode(clean_body)
+    end
 
+    if not data then
         return {
             ok = false,
             error = "JSON inválido.",
-            detail =
-                tostring(decode_error)
+            detail = tostring(decode_error)
         }
     end
 
