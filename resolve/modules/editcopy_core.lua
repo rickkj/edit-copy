@@ -1,34 +1,42 @@
-local json = require("dkjson")
-local socket = require("socket")
+local json =
+    require("dkjson")
+
+local socket =
+    require("socket")
 
 local EditCopy = {}
-local server = nil
 
 local handlers = {}
 
-local HOST = "127.0.0.1"
-local PORT = 56002
+local server = nil
 
-local function json_response(payload)
-    return json.encode(payload)
-end
+local HOST =
+    "127.0.0.1"
 
-local function send_http_response(client, status_code, body)
+local PORT =
+    56002
 
-    local status_text = {
-        [200] = "OK",
-        [400] = "Bad Request",
-        [404] = "Not Found",
-        [500] = "Internal Server Error"
-    }
 
-    local text = status_text[status_code] or "OK"
+local function send_response(
+    client,
+    status,
+    body
+)
+
+    local status_text =
+        status == 200
+        and "OK"
+        or status == 400
+        and "Bad Request"
+        or status == 404
+        and "Not Found"
+        or "Internal Server Error"
 
     local response =
         "HTTP/1.1 "
-        .. tostring(status_code)
+        .. tostring(status)
         .. " "
-        .. text
+        .. status_text
         .. "\r\n"
         .. "Content-Type: application/json\r\n"
         .. "Content-Length: "
@@ -38,20 +46,20 @@ local function send_http_response(client, status_code, body)
         .. "\r\n"
         .. body
 
-    local ok, err = client:send(response)
-
-    if not ok and err then
-        print("[EditCOPY HTTP] erro ao enviar resposta: " .. tostring(err))
-    end
+    client:send(response)
 end
 
-local function read_headers(client)
+
+local function read_headers(
+    client
+)
 
     local headers = {}
 
     while true do
 
-        local line, err = client:receive("*l")
+        local line, err =
+            client:receive("*l")
 
         if not line then
             return nil, err
@@ -61,18 +69,26 @@ local function read_headers(client)
             break
         end
 
-        local key, value =
-            line:match("^([^:]+):%s*(.*)$")
+        local name, value =
+            line:match(
+                "^([^:]+):%s*(.*)$"
+            )
 
-        if key and value then
-            headers[string.lower(key)] = value
+        if name then
+
+            headers[
+                string.lower(name)
+            ] = value
         end
     end
 
     return headers
 end
 
-local function read_request(client)
+
+local function read_request(
+    client
+)
 
     local request_line, err =
         client:receive("*l")
@@ -82,28 +98,34 @@ local function read_request(client)
     end
 
     local method, path =
-        request_line:match("^(%S+)%s+(%S+)")
+        request_line:match(
+            "^(%S+)%s+(%S+)"
+        )
 
-    if not method or not path then
-        return nil, "HTTP request line inválida"
+    if not method then
+        return nil,
+            "HTTP request line inválida"
     end
 
-    local headers, header_err =
+    local headers, header_error =
         read_headers(client)
 
     if not headers then
-        return nil, header_err
+        return nil, header_error
     end
 
-    local content_length =
-        tonumber(headers["content-length"] or "0")
+    local length =
+        tonumber(
+            headers["content-length"]
+                or "0"
+        )
 
     local body = ""
 
-    if content_length > 0 then
+    if length > 0 then
 
         body, err =
-            client:receive(content_length)
+            client:receive(length)
 
         if not body then
             return nil, err
@@ -118,23 +140,34 @@ local function read_request(client)
     }
 end
 
-function EditCopy.start_server(port)
+
+function EditCopy.start_server(
+    port
+)
 
     if server then
-        print("[EditCOPY Lua] servidor já está iniciado")
+
+        print(
+            "[EditCOPY Lua] Server já iniciado."
+        )
+
         return server
     end
 
     local srv, err =
-        socket.bind(HOST, port or PORT)
+        socket.bind(
+            HOST,
+            port or PORT
+        )
 
     if not srv then
+
         error(
-            "Não foi possível abrir "
+            "Falha ao abrir "
             .. HOST
             .. ":"
             .. tostring(port or PORT)
-            .. " - "
+            .. " -> "
             .. tostring(err)
         )
     end
@@ -143,48 +176,50 @@ function EditCopy.start_server(port)
 
     server:settimeout(0)
 
-    print(
-        "[EditCOPY Lua] Listening on "
-        .. HOST
-        .. ":"
-        .. tostring(port or PORT)
-    )
-
     return server
 end
 
-function EditCopy.handle_request(body)
 
-    local decoded, _, decode_err =
+function EditCopy.handle_request(
+    body
+)
+
+    local data, _, decode_error =
         json.decode(body)
 
-    if not decoded then
+    if not data then
 
         return {
             ok = false,
-            error = "JSON inválido",
-            detail = tostring(decode_err)
+            error = "JSON inválido.",
+            detail =
+                tostring(decode_error)
         }
     end
 
-    local func = decoded.func
+    local func =
+        data.func
 
     if type(func) ~= "string" then
 
         return {
             ok = false,
-            error = "Campo 'func' não informado"
+            error =
+                "Campo 'func' não informado."
         }
     end
 
-    local handler = handlers[func]
+    local handler =
+        handlers[func]
 
     if not handler then
 
         return {
             ok = false,
             func = func,
-            error = "Função não permitida: " .. func
+            error =
+                "Função não permitida: "
+                .. func
         }
     end
 
@@ -193,123 +228,162 @@ function EditCopy.handle_request(body)
         .. func
     )
 
-    local ok, result =
-        pcall(handler, decoded)
+    local success, result =
+        pcall(
+            handler,
+            data
+        )
 
-    if not ok then
+    if not success then
 
         return {
             ok = false,
             func = func,
-            error = "Erro interno no handler",
-            detail = tostring(result)
+            error =
+                "Erro no handler.",
+            detail =
+                tostring(result)
         }
     end
 
-    result = result or {}
+    result =
+        result
+        or {}
 
-    result.ok = true
-    result.func = func
+    if result.ok == nil then
+        result.ok = true
+    end
+
+    result.func =
+        func
 
     return result
 end
 
-handlers["Ping"] = function(data)
 
-    return {
-        data = {
-            message = "EditCOPY Lua server is alive"
-        }
-    }
-end
-
-handlers["GetResolveInfo"] = function(data)
-
-    local resolve = Resolve()
-
-    if not resolve then
-        error("Resolve() retornou nil")
-    end
-
-    local product =
-        resolve:GetProductName()
-
-    local version =
-        resolve:GetVersionString()
-
-    return {
-        data = {
-            product = product,
-            version = version
-        }
-    }
-end
-
-handlers["GetTimelineInfo"] = function(data)
-
-    local resolve = Resolve()
-
-    if not resolve then
-        error("Resolve() retornou nil")
-    end
-
-    local project_manager =
-        resolve:GetProjectManager()
-
-    if not project_manager then
-        error("GetProjectManager() retornou nil")
-    end
-
-    local project =
-        project_manager:GetCurrentProject()
-
-    if not project then
+handlers["Ping"] =
+    function(data)
 
         return {
-            ok = false,
-            error = "Nenhum projeto está aberto."
+            ok = true,
+            data = {
+                message =
+                    "EditCOPY Lua server is alive"
+            }
         }
     end
 
-    local timeline =
-        project:GetCurrentTimeline()
 
-    if not timeline then
+handlers["GetResolveInfo"] =
+    function(data)
+
+        local resolve =
+            Resolve()
+
+        if not resolve then
+            error(
+                "Resolve() retornou nil."
+            )
+        end
 
         return {
-            ok = false,
-            error = "Nenhuma timeline está aberta."
+            ok = true,
+            data = {
+                product =
+                    resolve:GetProductName(),
+
+                version =
+                    resolve:GetVersionString()
+            }
         }
     end
 
-    local frame_rate =
-        tonumber(
-            timeline:GetSetting("timelineFrameRate")
-        )
 
-    local current_timecode =
-        timeline:GetCurrentTimecode()
+handlers["GetTimelineInfo"] =
+    function(data)
 
-    local end_frame =
-        timeline:GetEndFrame()
+        local resolve =
+            Resolve()
 
-    local track_count =
-        timeline:GetTrackCount("video")
+        if not resolve then
+            error(
+                "Resolve() retornou nil."
+            )
+        end
 
-    return {
-        data = {
-            name = timeline:GetName(),
-            frameRate = frame_rate,
-            currentTimecode = current_timecode,
-            duration = tostring(end_frame),
-            videoTrackCount = track_count
+        local project_manager =
+            resolve:GetProjectManager()
+
+        if not project_manager then
+            error(
+                "GetProjectManager() retornou nil."
+            )
+        end
+
+        local project =
+            project_manager:GetCurrentProject()
+
+        if not project then
+
+            return {
+                ok = false,
+                error =
+                    "Nenhum projeto está aberto."
+            }
+        end
+
+        local timeline =
+            project:GetCurrentTimeline()
+
+        if not timeline then
+
+            return {
+                ok = false,
+                error =
+                    "Nenhuma timeline está aberta."
+            }
+        end
+
+        local fps =
+            tonumber(
+                timeline:GetSetting(
+                    "timelineFrameRate"
+                )
+            )
+
+        return {
+            ok = true,
+            data = {
+                name =
+                    timeline:GetName(),
+
+                frameRate = fps,
+
+                currentTimecode =
+                    timeline:GetCurrentTimecode(),
+
+                duration =
+                    tostring(
+                        timeline:GetEndFrame()
+                    ),
+
+                videoTrackCount =
+                    timeline:GetTrackCount(
+                        "video"
+                    )
+            }
         }
-    }
-end
+    end
+
 
 function EditCopy.run()
 
-    assert(server, "Servidor não iniciado")
+    if not server then
+
+        error(
+            "Servidor não iniciado."
+        )
+    end
 
     while true do
 
@@ -320,88 +394,78 @@ function EditCopy.run()
 
             client:settimeout(10)
 
-            local request, err =
+            local request,
+                request_error =
                 read_request(client)
 
             if not request then
 
-                send_http_response(
+                send_response(
                     client,
                     400,
-                    json_response({
+                    json.encode({
                         ok = false,
-                        error = "HTTP request inválida",
-                        detail = tostring(err)
+                        error =
+                            "HTTP request inválida.",
+                        detail =
+                            tostring(
+                                request_error
+                            )
                     })
                 )
-
-                client:close()
 
             else
 
                 if request.method ~= "POST" then
 
-                    send_http_response(
+                    send_response(
                         client,
                         404,
-                        json_response({
+                        json.encode({
                             ok = false,
-                            error = "Somente POST é suportado."
+                            error =
+                                "Somente POST é suportado."
                         })
                     )
-
-                    client:close()
 
                 elseif request.path ~= "/" then
 
-                    send_http_response(
+                    send_response(
                         client,
                         404,
-                        json_response({
+                        json.encode({
                             ok = false,
-                            error = "Endpoint inexistente."
+                            error =
+                                "Endpoint inexistente."
                         })
                     )
 
-                    client:close()
-
                 else
 
-                    local result
-
-                    local ok, response =
-                        pcall(
-                            EditCopy.handle_request,
+                    local response =
+                        EditCopy.handle_request(
                             request.body
                         )
 
-                    if ok then
-                        result = response
-                    else
+                    local status =
+                        response.ok
+                        and 200
+                        or 400
 
-                        result = {
-                            ok = false,
-                            error = "Erro processando requisição.",
-                            detail = tostring(response)
-                        }
-                    end
-
-                    local status_code =
-                        result.ok and 200 or 400
-
-                    send_http_response(
+                    send_response(
                         client,
-                        status_code,
-                        json_response(result)
+                        status,
+                        json.encode(response)
                     )
-
-                    client:close()
                 end
             end
+
+            client:close()
         end
 
         socket.sleep(0.01)
     end
 end
+
 
 return EditCopy

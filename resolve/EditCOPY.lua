@@ -1,53 +1,104 @@
-local SCRIPT_DIR = debug.getinfo(1, "S").source:sub(2)
+local source =
+    debug.getinfo(1, "S").source
 
-local separator = package.config:sub(1, 1)
+local SCRIPT_PATH =
+    source:sub(2)
 
-SCRIPT_DIR = SCRIPT_DIR:match("^(.*)" .. separator .. "[^" .. separator .. "]+$") or "."
+local SEPARATOR =
+    package.config:sub(1, 1)
 
-package.path =
+local SCRIPT_DIR =
+    SCRIPT_PATH:match(
+        "^(.*)"
+        .. SEPARATOR
+        .. "[^"
+        .. SEPARATOR
+        .. "]+$"
+    )
+
+if not SCRIPT_DIR then
+    error(
+        "[EditCOPY Lua] Não foi possível determinar o diretório do script."
+    )
+end
+
+local MODULES_DIR =
     SCRIPT_DIR
-    .. separator
-    .. "?.lua;"
-    .. SCRIPT_DIR
-    .. separator
-    .. "?/init.lua;"
-    .. package.path
-
-local MODULE_DIR = SCRIPT_DIR .. separator .. "modules"
-
-package.path =
-    MODULE_DIR
-    .. separator
-    .. "?.lua;"
-    .. package.path
+    .. SEPARATOR
+    .. "modules"
 
 local DEPS_DIR =
-    SCRIPT_DIR .. separator .. "deps"
+    SCRIPT_DIR
+    .. SEPARATOR
+    .. "deps"
 
 package.path =
-    DEPS_DIR .. separator .. "?.lua;"
+    MODULES_DIR
+    .. SEPARATOR
+    .. "?.lua;"
+    .. DEPS_DIR
+    .. SEPARATOR
+    .. "?.lua;"
     .. package.path
 
-print("[EditCOPY Lua] Iniciando...")
+print(
+    "[EditCOPY Lua] Iniciando..."
+)
 
-local ok, EditCopy = pcall(require, "editcopy_core")
+local ok, core =
+    pcall(
+        require,
+        "editcopy_core"
+    )
 
 if not ok then
-    print("[EditCOPY Lua] ERRO ao carregar editcopy_core:")
-    print(tostring(EditCopy))
+
+    print(
+        "[EditCOPY Lua] ERRO ao carregar editcopy_core:"
+    )
+
+    print(
+        tostring(core)
+    )
+
     return
 end
 
-local ok_start, err = pcall(function()
-    EditCopy.start_server(56002)
-end)
+local ok_start, start_error =
+    pcall(
+        core.start_server,
+        56002
+    )
 
 if not ok_start then
-    print("[EditCOPY Lua] ERRO ao iniciar servidor:")
-    print(tostring(err))
+
+    print(
+        "[EditCOPY Lua] ERRO ao iniciar servidor:"
+    )
+
+    print(
+        tostring(start_error)
+    )
+
     return
 end
 
-print("[EditCOPY Lua] Servidor iniciado em 127.0.0.1:56002")
+print(
+    "[EditCOPY Lua] Listening on 127.0.0.1:56002"
+)
 
-EditCopy.run()
+local ok_run, run_error =
+    pcall(
+        core.run
+    )
+
+if not ok_run then
+
+    print(
+        "[EditCOPY Lua] ERRO no servidor:"
+    )
+
+    print(
+        tostring(run_error)
+    )
+end

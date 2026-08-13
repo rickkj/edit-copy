@@ -1,9 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
+
 import {
   ResolveResponse,
   ResolveInfo,
   TimelineInfo,
-  ImageItem,
 } from "../types/resolve";
 
 export async function callResolve<T = unknown>(
@@ -13,22 +13,27 @@ export async function callResolve<T = unknown>(
 ): Promise<ResolveResponse<T>> {
 
   try {
-    const raw = await invoke<string>("resolve_bridge", {
-      payload: {
-        ...payload,
-        func,
-      },
-      timeoutSecs,
-    });
 
-    const parsed = JSON.parse(raw) as ResolveResponse<T>;
+    const raw = await invoke<string>(
+      "resolve_bridge",
+      {
+        payload: {
+          ...payload,
+          func,
+        },
+        timeoutSecs,
+      }
+    );
 
-    return parsed;
+    const response =
+      JSON.parse(raw) as ResolveResponse<T>;
+
+    return response;
 
   } catch (error) {
 
     console.error(
-      `[EditCOPY] Error calling ${func}:`,
+      `[EditCOPY] ${func} failed:`,
       error
     );
 
@@ -39,17 +44,32 @@ export async function callResolve<T = unknown>(
         typeof error === "string"
           ? error
           : error instanceof Error
-          ? error.message
-          : "Erro na comunicação com o bridge.",
+            ? error.message
+            : "Erro na comunicação com o DaVinci Resolve.",
     };
   }
 }
 
-export const pingResolve = () =>
-  callResolve<{ message: string }>("Ping", {}, 10);
+export function pingResolve() {
+  return callResolve<{ message: string }>(
+    "Ping",
+    {},
+    10
+  );
+}
 
-export const getResolveInfo = () =>
-  callResolve<ResolveInfo>("GetResolveInfo", {}, 10);
+export function getResolveInfo() {
+  return callResolve<ResolveInfo>(
+    "GetResolveInfo",
+    {},
+    10
+  );
+}
 
-export const getTimelineInfo = () =>
-  callResolve<TimelineInfo>("GetTimelineInfo", {}, 10);
+export function getTimelineInfo() {
+  return callResolve<TimelineInfo>(
+    "GetTimelineInfo",
+    {},
+    10
+  );
+}
