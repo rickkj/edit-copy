@@ -12,7 +12,7 @@ pub struct BridgePayload {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BridgeResponse {
-    pub ok: boolean,
+    pub ok: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

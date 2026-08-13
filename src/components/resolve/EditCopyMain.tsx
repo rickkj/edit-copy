@@ -19,26 +19,40 @@ export function EditCopyMain() {
     track: 'V1'
   });
 
-  const checkConnection = useCallback(async () => {
+  const checkConnection = useCallback(async (manual = false) => {
+    if (manual) setStatus('Connecting');
+    
     try {
+      console.log("[EditCOPY UI] Testing Resolve connection...");
       const res = await pingResolve();
+      
       if (res.ok) {
         setStatus('Connected');
+        console.log("[EditCOPY UI] Resolve connected");
+        
+        // Tentar obter info da timeline se estiver conectado
         const info = await getTimelineInfo();
         if (info.ok && info.data) {
            setResolveName(info.data.name);
+           if (manual) toast.success("Conectado ao DaVinci Resolve!");
+        } else if (manual) {
+           toast.info("Conectado ao Resolve, mas nenhuma timeline ativa foi detectada.");
         }
       } else {
-        setStatus('Disconnected');
+        setStatus(manual ? 'Error' : 'Disconnected');
+        if (manual) toast.error("Falha na conexão", { description: res.error });
       }
     } catch (e) {
-      setStatus('Disconnected');
+      console.error("[EditCOPY UI] Connection check failed:", e);
+      setStatus(manual ? 'Error' : 'Disconnected');
+      if (manual) toast.error("O DaVinci Resolve não respondeu.");
     }
   }, []);
 
+  // Auto-connect on mount
   useEffect(() => {
-    checkConnection();
-    const interval = setInterval(checkConnection, 10000);
+    checkConnection(false);
+    const interval = setInterval(() => checkConnection(false), 15000);
     return () => clearInterval(interval);
   }, [checkConnection]);
 
@@ -65,7 +79,7 @@ export function EditCopyMain() {
 
   return (
     <div className="flex flex-col h-screen max-w-4xl mx-auto overflow-hidden border-x border-[#1A1A1A]">
-      <Header status={status} onTestConnection={checkConnection} />
+      <Header status={status} onTestConnection={() => checkConnection(true)} />
       
       <main className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
