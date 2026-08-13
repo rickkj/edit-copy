@@ -4,7 +4,7 @@ use std::time::Duration;
 use tauri::command;
 
 const RESOLVE_ENDPOINT: &str =
-    "http://127.0.0.1:56002/";
+    "http://127.0.0.1:56003/";
 
 #[derive(Debug, serde::Deserialize)]
 pub struct ResolveBridgeArgs {
