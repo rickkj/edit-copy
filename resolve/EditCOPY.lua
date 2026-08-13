@@ -74,8 +74,22 @@ print(
     "[EditCOPY Lua] ljsocket carregado com sucesso."
 )
 
+print(
+    "[EditCOPY Lua] ljsocket type:",
+    type(socket_lib)
+)
+
+print(
+    "[EditCOPY Lua] ljsocket.find_first_address:",
+    type(socket_lib.find_first_address)
+)
+
+print(
+    "[EditCOPY Lua] ljsocket.create:",
+    type(socket_lib.create)
+)
+
 -- Validação de ljsocket concluída.
--- (Removido teste de bind manual aqui para evitar conflito com o core)
 print(
     "[EditCOPY Lua] ljsocket validado e pronto."
 )
