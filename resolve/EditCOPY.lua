@@ -27,19 +27,12 @@ local MODULES_DIR =
     .. SEPARATOR
     .. "modules"
 
-local DEPS_DIR =
-    SCRIPT_DIR
-    .. SEPARATOR
-    .. "deps"
-
 package.path =
     MODULES_DIR
     .. SEPARATOR
     .. "?.lua;"
-    .. DEPS_DIR
-    .. SEPARATOR
-    .. "?.lua;"
     .. package.path
+
 
 print(
     "[EditCOPY Lua] Iniciando..."
@@ -94,8 +87,9 @@ if not testSocket then
 end
 testSocket:close()
 print(
-    "[EditCOPY Lua] Bind TCP realizado com sucesso em 127.0.0.1:56003"
+    "[EditCOPY Lua] TCP server (ljsocket) pronto em 127.0.0.1:56003"
 )
+
 
 -- Carregamento do core do EditCOPY
 local ok_core, core =

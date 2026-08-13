@@ -2,7 +2,8 @@ local json =
     require("dkjson")
 
 local socket =
-    require("socket")
+    require("ljsocket")
+
 
 local EditCopy = {}
 
@@ -277,107 +278,6 @@ handlers["Ping"] =
         }
     end
 
-
-handlers["GetResolveInfo"] =
-    function(data)
-
-        local resolve =
-            Resolve()
-
-        if not resolve then
-            error(
-                "Resolve() retornou nil."
-            )
-        end
-
-        return {
-            ok = true,
-            data = {
-                product =
-                    resolve:GetProductName(),
-
-                version =
-                    resolve:GetVersionString()
-            }
-        }
-    end
-
-
-handlers["GetTimelineInfo"] =
-    function(data)
-
-        local resolve =
-            Resolve()
-
-        if not resolve then
-            error(
-                "Resolve() retornou nil."
-            )
-        end
-
-        local project_manager =
-            resolve:GetProjectManager()
-
-        if not project_manager then
-            error(
-                "GetProjectManager() retornou nil."
-            )
-        end
-
-        local project =
-            project_manager:GetCurrentProject()
-
-        if not project then
-
-            return {
-                ok = false,
-                error =
-                    "Nenhum projeto está aberto."
-            }
-        end
-
-        local timeline =
-            project:GetCurrentTimeline()
-
-        if not timeline then
-
-            return {
-                ok = false,
-                error =
-                    "Nenhuma timeline está aberta."
-            }
-        end
-
-        local fps =
-            tonumber(
-                timeline:GetSetting(
-                    "timelineFrameRate"
-                )
-            )
-
-        return {
-            ok = true,
-            data = {
-                name =
-                    timeline:GetName(),
-
-                frameRate = fps,
-
-                currentTimecode =
-                    timeline:GetCurrentTimecode(),
-
-                duration =
-                    tostring(
-                        timeline:GetEndFrame()
-                    ),
-
-                videoTrackCount =
-                    timeline:GetTrackCount(
-                        "video"
-                    )
-            }
-        }
-    end
 
 
 function EditCopy.run()
