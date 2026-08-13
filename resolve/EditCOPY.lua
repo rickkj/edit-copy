@@ -71,12 +71,7 @@ if not ok_socket then
     return
 end
 print(
-    "[EditCOPY Lua] ljsocket carregado com sucesso."
-)
-
-print(
-    "[EditCOPY Lua] ljsocket type:",
-    type(socket_lib)
+    "[EditCOPY Lua] ljsocket carregado."
 )
 
 print(
@@ -88,12 +83,6 @@ print(
     "[EditCOPY Lua] ljsocket.create:",
     type(socket_lib.create)
 )
-
--- Validação de ljsocket concluída.
-print(
-    "[EditCOPY Lua] ljsocket validado e pronto."
-)
-
 
 -- Teste find_first_address isoladamente
 local test_info, test_err =
@@ -110,9 +99,6 @@ if not test_info then
 end
 
 print("[EditCOPY Lua] find_first_address OK")
-print("[EditCOPY Lua] family:", tostring(test_info.family))
-print("[EditCOPY Lua] socket_type:", tostring(test_info.socket_type))
-print("[EditCOPY Lua] protocol:", tostring(test_info.protocol))
 
 -- Teste socket.create
 local test_server, test_create_err =
@@ -130,6 +116,15 @@ if not test_server then
 end
 
 print("[EditCOPY Lua] socket.create OK")
+
+assert(test_server:set_blocking(false))
+assert(test_server:set_option("nodelay", true, "tcp"))
+assert(test_server:set_option("reuseaddr", true))
+assert(test_server:bind(test_info))
+assert(test_server:listen())
+
+print("[EditCOPY Lua] TCP server pronto em 127.0.0.1:56003")
+
 test_server:close()
 
 
