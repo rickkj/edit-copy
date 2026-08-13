@@ -117,7 +117,9 @@ end
 
 print("[EditCOPY Lua] socket.create OK")
 
-assert(test_server:set_blocking(false))
+-- MUDANÇA V14: REMOVER set_blocking(false) para evitar erro ioctlsocket
+-- assert(test_server:set_blocking(false))
+
 assert(test_server:set_option("nodelay", true, "tcp"))
 assert(test_server:set_option("reuseaddr", true))
 assert(test_server:bind(test_info))
@@ -158,11 +160,7 @@ if not ok_start then
     return
 end
 
-print(
-    "[EditCOPY Lua] HTTP server listening on 127.0.0.1:56003"
-)
-
--- Rodar servidor
+-- Rodar servidor (core.run agora contém o loop blocking)
 local ok_run, run_error =
     pcall(
         core.run
