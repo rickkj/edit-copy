@@ -1,375 +1,171 @@
-local json =
-    require("dkjson")
+local json = require("dkjson")
+local socket = require("ljsocket")
+local ffi = require("ffi")
 
-local socket =
-    require("ljsocket")
+ffi.cdef[[
+    void Sleep(unsigned int ms);
+]]
 
+local function sleep(seconds)
+    ffi.C.Sleep(math.floor(seconds * 1000))
+end
 
 local EditCopy = {}
-
 local handlers = {}
-
 local server = nil
+local HOST = "127.0.0.1"
+local PORT = 56003
 
-local HOST =
-    "127.0.0.1"
-
-local PORT =
-    56003
-
-
-local function send_response(
-    client,
-    status,
-    body
-)
-
-    local status_text =
-        status == 200
-        and "OK"
-        or status == 400
-        and "Bad Request"
-        or status == 404
-        and "Not Found"
-        or "Internal Server Error"
-
-    local response =
-        "HTTP/1.1 "
-        .. tostring(status)
-        .. " "
-        .. status_text
-        .. "\r\n"
+local function create_response(body)
+    local header =
+        "HTTP/1.1 200 OK\r\n"
+        .. "Server: EditCOPY/0.1\r\n"
         .. "Content-Type: application/json\r\n"
         .. "Content-Length: "
         .. tostring(#body)
         .. "\r\n"
         .. "Connection: close\r\n"
         .. "\r\n"
-        .. body
 
-    client:send(response)
+    return header .. body
 end
 
-
-local function read_headers(
-    client
-)
-
-    local headers = {}
-
-    while true do
-
-        local line, err =
-            client:receive("*l")
-
-        if not line then
-            return nil, err
-        end
-
-        if line == "" then
-            break
-        end
-
-        local name, value =
-            line:match(
-                "^([^:]+):%s*(.*)$"
-            )
-
-        if name then
-
-            headers[
-                string.lower(name)
-            ] = value
-        end
-    end
-
-    return headers
-end
-
-
-local function read_request(
-    client
-)
-
-    local request_line, err =
-        client:receive("*l")
-
-    if not request_line then
-        return nil, err
-    end
-
-    local method, path =
-        request_line:match(
-            "^(%S+)%s+(%S+)"
-        )
-
-    if not method then
-        return nil,
-            "HTTP request line inválida"
-    end
-
-    local headers, header_error =
-        read_headers(client)
-
-    if not headers then
-        return nil, header_error
-    end
-
-    local length =
-        tonumber(
-            headers["content-length"]
-                or "0"
-        )
-
-    local body = ""
-
-    if length > 0 then
-
-        body, err =
-            client:receive(length)
-
-        if not body then
-            return nil, err
-        end
-    end
-
-    return {
-        method = method,
-        path = path,
-        headers = headers,
-        body = body
-    }
-end
-
-
-function EditCopy.start_server(
-    port
-)
-
+function EditCopy.start_server(port)
     if server then
-
-        print(
-            "[EditCOPY Lua] Server já iniciado."
-        )
-
+        print("[EditCOPY Lua] Server já iniciado.")
         return server
     end
 
-    local srv, err =
-        socket.bind(
-            HOST,
-            port or PORT
-        )
+    local actual_port = port or PORT
+    local info = assert(socket.find_first_address(HOST, actual_port))
+    local srv = assert(socket.create(info.family, info.socket_type, info.protocol))
 
-    if not srv then
-
-        error(
-            "Falha ao abrir "
-            .. HOST
-            .. ":"
-            .. tostring(port or PORT)
-            .. " -> "
-            .. tostring(err)
-        )
-    end
+    assert(srv:set_blocking(false))
+    assert(srv:set_option("nodelay", true, "tcp"))
+    assert(srv:set_option("reuseaddr", true))
+    assert(srv:bind(info))
+    assert(srv:listen())
 
     server = srv
-
-    server:settimeout(0)
-
     return server
 end
 
-
-function EditCopy.handle_request(
-    body
-)
-
-    local data, _, decode_error =
-        json.decode(body)
-
-    if not data then
-        -- Tentar limpar caracteres extras (espaços, tabs, quebras de linha) se falhar
-        local clean_body = body:match("^%s*(.-)%s*$")
-        data, _, decode_error = json.decode(clean_body)
-    end
-
-    if not data then
-        return {
-            ok = false,
-            error = "JSON inválido.",
-            detail = tostring(decode_error)
+handlers["Ping"] = function(data)
+    return {
+        ok = true,
+        func = "Ping",
+        data = {
+            message = "EditCOPY Lua server is alive"
         }
-    end
-
-    local func =
-        data.func
-
-    if type(func) ~= "string" then
-
-        return {
-            ok = false,
-            error =
-                "Campo 'func' não informado."
-        }
-    end
-
-    local handler =
-        handlers[func]
-
-    if not handler then
-
-        return {
-            ok = false,
-            func = func,
-            error =
-                "Função não permitida: "
-                .. func
-        }
-    end
-
-    print(
-        "[EditCOPY Lua] Executando: "
-        .. func
-    )
-
-    local success, result =
-        pcall(
-            handler,
-            data
-        )
-
-    if not success then
-
-        return {
-            ok = false,
-            func = func,
-            error =
-                "Erro no handler.",
-            detail =
-                tostring(result)
-        }
-    end
-
-    result =
-        result
-        or {}
-
-    if result.ok == nil then
-        result.ok = true
-    end
-
-    result.func =
-        func
-
-    return result
+    }
 end
 
-
-handlers["Ping"] =
-    function(data)
-
-        return {
-            ok = true,
-            data = {
-                message =
-                    "EditCOPY Lua server is alive"
-            }
-        }
-    end
-
-
-
 function EditCopy.run()
-
     if not server then
-
-        error(
-            "Servidor não iniciado."
-        )
+        error("Servidor não iniciado.")
     end
 
     while true do
-
-        local client =
-            server:accept()
+        local client, err = server:accept()
 
         if client then
+            print("[EditCOPY HTTP] Client accepted")
+            
+            local peername, peer_err = client:get_peer_name()
+            if peername then
+                assert(client:set_blocking(false))
 
-            client:settimeout(10)
+                local request = ""
+                local receive_err = nil
+                
+                -- Loop de leitura da requisição HTTP (estilo AutoSubs)
+                while true do
+                    local sep_start, sep_end = string.find(request, "\r\n\r\n", 1, true)
 
-            local request,
-                request_error =
-                read_request(client)
+                    if sep_end then
+                        print("[EditCOPY HTTP] Headers received")
+                        local headers = string.sub(request, 1, sep_start - 1)
+                        local body_start_idx = sep_end + 1
+                        local content_length = string.match(headers, "[Cc]ontent%-[Ll]ength:%s*(%d+)")
 
-            if not request then
+                        if content_length then
+                            local needed = tonumber(content_length)
+                            print("[EditCOPY HTTP] Content-Length: " .. tostring(needed))
+                            local current = #request - (body_start_idx - 1)
 
-                send_response(
-                    client,
-                    400,
-                    json.encode({
-                        ok = false,
-                        error =
-                            "HTTP request inválida.",
-                        detail =
-                            tostring(
-                                request_error
-                            )
-                    })
-                )
+                            if current >= needed then
+                                print("[EditCOPY HTTP] Body received")
+                                break
+                            end
+                        else
+                            break
+                        end
+                    end
 
-            else
-
-                if request.method ~= "POST" then
-
-                    send_response(
-                        client,
-                        404,
-                        json.encode({
-                            ok = false,
-                            error =
-                                "Somente POST é suportado."
-                        })
-                    )
-
-                elseif request.path ~= "/" then
-
-                    send_response(
-                        client,
-                        404,
-                        json.encode({
-                            ok = false,
-                            error =
-                                "Endpoint inexistente."
-                        })
-                    )
-
-                else
-
-                    local response =
-                        EditCopy.handle_request(
-                            request.body
-                        )
-
-                    local status =
-                        response.ok
-                        and 200
-                        or 400
-
-                    send_response(
-                        client,
-                        status,
-                        json.encode(response)
-                    )
+                    local chunk, recv_err, partial = client:receive(1024)
+                    
+                    if chunk and #chunk > 0 then
+                        if request == "" then print("[EditCOPY HTTP] Received raw request") end
+                        request = request .. chunk
+                    elseif partial and #partial > 0 then
+                        if request == "" then print("[EditCOPY HTTP] Received raw request") end
+                        request = request .. partial
+                    else
+                        -- Se não recebeu nada e não deu erro de timeout, ou se deu outro erro, sai do loop
+                        if recv_err ~= "timeout" then
+                            break
+                        end
+                        -- Se deu timeout, esperamos um pouco e tentamos ler mais no próximo loop do client:receive
+                        sleep(0.01)
+                    end
                 end
-            end
 
-            client:close()
+                -- Processamento da requisição completa
+                local _, sep_end = string.find(request, "\r\n\r\n", 1, true)
+                if sep_end then
+                    local body = string.sub(request, sep_end + 1)
+                    print("[EditCOPY HTTP] Body:", tostring(body))
+
+                    local ok, data = pcall(json.decode, body, 1, nil)
+                    
+                    if ok and data then
+                        print("[EditCOPY HTTP] JSON decoded")
+                        local func = data.func
+                        print("[EditCOPY HTTP] Function: " .. tostring(func))
+                        
+                        local handler = handlers[func]
+                        if handler then
+                            local success, result = pcall(handler, data)
+                            if success then
+                                print("[EditCOPY HTTP] Handler completed")
+                                local response_body = json.encode(result)
+                                print("[EditCOPY HTTP] Sending response")
+                                local sent, send_error = client:send(create_response(response_body))
+                                if sent then
+                                    print("[EditCOPY HTTP] Response sent")
+                                else
+                                    print("[EditCOPY HTTP] Send failed:", send_error or "unknown")
+                                end
+                            else
+                                print("[EditCOPY HTTP] Handler error:", tostring(result))
+                            end
+                        else
+                            print("[EditCOPY HTTP] No handler for:", tostring(func))
+                        end
+                    else
+                        print("[EditCOPY HTTP] JSON decode failed")
+                    end
+                end
+                
+                client:close()
+            end
+        elseif err ~= "timeout" then
+            print("[EditCOPY HTTP] Accept error:", err)
         end
 
-        socket.sleep(0.01)
+        sleep(0.1)
     end
 end
 
-
 return EditCopy
+
