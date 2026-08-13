@@ -1,25 +1,31 @@
 import { invoke } from "@tauri-apps/api/core";
 import { ResolveResponse, ResolveInfo, TimelineInfo, ImageItem } from "../types/resolve";
+import { RESOLVE_CONFIG } from "../config/resolve";
 
-export async function callResolve<T>(func: string, payload: any = {}, timeoutSecs: number = 15): Promise<ResolveResponse<T>> {
+export async function callResolve<T>(func: string, payload: any = {}, timeoutSecs?: number): Promise<ResolveResponse<T>> {
+  const defaultTimeout = func === "Ping" ? RESOLVE_CONFIG.TIMEOUTS.PING : 
+                        func === "GetResolveInfo" ? RESOLVE_CONFIG.TIMEOUTS.GET_INFO :
+                        func === "GetTimelineInfo" ? RESOLVE_CONFIG.TIMEOUTS.GET_TIMELINE : 
+                        RESOLVE_CONFIG.TIMEOUTS.APPLY;
+
   try {
     const response = await invoke<any>("resolve_bridge", {
       payload: { ...payload, func },
-      timeoutSecs,
+      timeoutSecs: timeoutSecs || defaultTimeout,
     });
     return response as ResolveResponse<T>;
   } catch (error: any) {
-    console.error(`[EditCOPY] Error calling ${func}:`, error);
+    console.error(`[EditCOPY UI] Error calling ${func}:`, error);
     return {
       ok: false,
-      error: typeof error === 'string' ? error : (error.message || "Erro na comunicação com o bridge."),
+      error: typeof error === 'string' ? error : (error.message || "O DaVinci Resolve não respondeu dentro do tempo esperado."),
       detail: JSON.stringify(error),
       func,
     };
   }
 }
 
-export const pingResolve = () => callResolve<{ ok: boolean }>("Ping");
+export const pingResolve = () => callResolve<{ message: string }>("Ping");
 export const getResolveInfo = () => callResolve<ResolveInfo>("GetResolveInfo");
 export const getTimelineInfo = () => callResolve<TimelineInfo>("GetTimelineInfo");
 
