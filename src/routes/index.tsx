@@ -12,7 +12,11 @@ export const Route = createFileRoute("/")({
   head: () => ({
     title: "EditCOPY - DaVinci Resolve Integration",
     meta: [
-      { name: "description", content: "Professional clipboard to DaVinci Resolve timeline integration." }
+      { name: "description", content: "Professional clipboard to DaVinci Resolve timeline integration." },
+      { property: "og:title", content: "EditCOPY" },
+      { property: "og:description", content: "Copy images from clipboard directly to DaVinci Resolve timeline." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" }
     ]
   })
 });
