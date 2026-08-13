@@ -9,8 +9,10 @@ export async function processClipboardImage(): Promise<ImageItem | null> {
     if (!clipboardImage) return null;
 
     const rgba = await clipboardImage.rgba();
-    const width = clipboardImage.width;
-    const height = clipboardImage.height;
+    const size = await clipboardImage.size();
+    const width = size.width;
+    const height = size.height;
+
     
     // Gerar nome único
     const timestamp = new Date().getTime();
