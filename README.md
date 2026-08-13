@@ -4,6 +4,20 @@ Este guia explica como configurar e rodar o EditCOPY para integrar o clipboard d
 
 ---
 
+## ✅ Checklist de Pré-Execução
+
+Antes de rodar `npm run tauri:dev`, certifique-se de cumprir estas etapas:
+
+- [ ] **Node.js instalado:** Versão 18 ou superior.
+- [ ] **Rust instalado:** `rustc` e `cargo` configurados no PATH.
+- [ ] **DaVinci Resolve configurado:** `Preferences` -> `System` -> `General` -> `External scripting using` definido como **Local**.
+- [ ] **Scripts instalados:** Executou `npm run resolve:install` com sucesso.
+- [ ] **Dependências do projeto:** Executou `npm install` na raiz.
+- [ ] **DaVinci Resolve aberto:** O software deve estar em execução.
+- [ ] **Servidor Lua ativo:** Clicou em `Workspace` -> `Scripts` -> `EditCOPY` dentro do Resolve.
+
+---
+
 ## 🛠️ Guia Rápido de Comandos (Terminal)
 
 Siga esta ordem exata para configurar e rodar o projeto pela primeira vez:
