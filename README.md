@@ -11,6 +11,8 @@ Para facilitar o desenvolvimento e build do aplicativo desktop, utilize os segui
 - `npm run tauri:dev`: Inicia o aplicativo em modo de desenvolvimento (Hot Reload).
 - `npm run tauri:build`: Gera o executável de produção (.exe) para Windows.
 - `npm run tauri:clean`: Limpa os arquivos temporários de build do Rust/Cargo.
+- `npm run resolve:install`: Instala automaticamente os scripts Lua na pasta correta do DaVinci Resolve (Windows).
+- `npm run resolve:test`: Testa se o servidor Lua no DaVinci Resolve está respondendo.
 
 ---
 
@@ -24,27 +26,39 @@ Para que a integração funcione, você precisa configurar o DaVinci Resolve par
 - No DaVinci Resolve, vá em `Preferences` -> `System` -> `General` e certifique-se de que **"External scripting using"** está definido como **"Local"** ou **"Network"**.
 
 ### 2. Instalação dos Scripts Lua
-Copie o conteúdo da pasta `resolve/` deste projeto para a pasta de scripts do DaVinci Resolve:
 
-**Caminho no Windows:**
-`%AppData%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Comp\`
+Você pode instalar os scripts automaticamente ou manualmente:
 
-**Estrutura de arquivos correta:**
-```text
-Comp/
-├── EditCOPY.lua             (O lançador do script)
-├── modules/
-│   └── editcopy_core.lua    (O motor do servidor HTTP)
-└── deps/
-    └── dkjson.lua           (Dependência para JSON)
+**Opção A: Automatizada (Recomendada)**
+No terminal do projeto, execute:
+```bash
+npm run resolve:install
 ```
 
-### 3. Como Iniciar a Integração
+**Opção B: Manual**
+Copie o conteúdo da pasta `resolve/` deste projeto para:
+`%AppData%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Comp\`
+
+**Estrutura esperada:**
+```text
+Comp/
+├── EditCOPY.lua
+├── modules/
+│   └── editcopy_core.lua
+└── deps/
+    └── dkjson.lua
+```
+
+### 3. Como Iniciar e Testar a Integração
 1. Abra o **DaVinci Resolve**.
 2. No menu superior, vá em: **Workspace** -> **Scripts** -> **EditCOPY**.
-3. Verifique o Console do DaVinci (ou a janela que abrir) para a mensagem: `[EditCOPY Lua] Listening on 127.0.0.1:56002`.
-4. Com o servidor Lua rodando, abra o aplicativo **EditCOPY**.
-5. No EditCOPY, o status de conexão deve mudar para **"Connected"**.
+3. No console do Resolve, você verá: `[EditCOPY Lua] Listening on 127.0.0.1:56002`.
+4. **Validar via Terminal:** Execute o comando abaixo para confirmar que o Resolve está respondendo:
+   ```bash
+   npm run resolve:test
+   ```
+   Você deve receber uma resposta JSON: `{"ok": true, "message": "Pong"}`.
+5. Agora, abra o aplicativo **EditCOPY** para começar a usar.
 
 ---
 
