@@ -33,7 +33,7 @@ export function EditCopyMain() {
         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
           <ImageQueue 
             images={images} 
-            onRemove={(id) => setImages(prev => prev.filter(img => img.id !== id))}
+            onRemove={(id: string) => setImages(prev => prev.filter(img => img.id !== id))}
             onClear={() => setImages([])}
           />
         </div>
@@ -41,8 +41,9 @@ export function EditCopyMain() {
         <div className="p-4 border-t border-[#1A1A1A] bg-[#0F0F0F]">
           <Settings 
             values={settings} 
-            onChange={(newSettings) => setSettings(prev => ({ ...prev, ...newSettings }))} 
+            onChange={(newSettings: any) => setSettings(prev => ({ ...prev, ...newSettings }))} 
           />
+
         </div>
       </main>
 
