@@ -38,7 +38,9 @@ function EditCopy.start_server(port)
 
     local actual_port = port or PORT
     local info = assert(socket.find_first_address(HOST, actual_port))
+    print("[EditCOPY Lua] find_first_address OK")
     local srv = assert(socket.create(info.family, info.socket_type, info.protocol))
+    print("[EditCOPY Lua] socket.create OK")
 
     assert(srv:set_blocking(false))
     assert(srv:set_option("nodelay", true, "tcp"))
