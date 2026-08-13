@@ -95,6 +95,43 @@ print(
 )
 
 
+-- Teste find_first_address isoladamente
+local test_info, test_err =
+    socket_lib.find_first_address(
+        "127.0.0.1",
+        56003
+    )
+
+if not test_info then
+    error(
+        "[EditCOPY Lua] find_first_address falhou: "
+        .. tostring(test_err)
+    )
+end
+
+print("[EditCOPY Lua] find_first_address OK")
+print("[EditCOPY Lua] family:", tostring(test_info.family))
+print("[EditCOPY Lua] socket_type:", tostring(test_info.socket_type))
+print("[EditCOPY Lua] protocol:", tostring(test_info.protocol))
+
+-- Teste socket.create
+local test_server, test_create_err =
+    socket_lib.create(
+        test_info.family,
+        test_info.socket_type,
+        test_info.protocol
+    )
+
+if not test_server then
+    error(
+        "[EditCOPY Lua] socket.create falhou: "
+        .. tostring(test_create_err)
+    )
+end
+
+print("[EditCOPY Lua] socket.create OK")
+test_server:close()
+
 
 -- Carregamento do core do EditCOPY
 local ok_core, core =

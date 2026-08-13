@@ -78,12 +78,14 @@ local IPPROTO_TCP_LEVEL = 6
 local FIONBIO = 0x8004667E
 
 function M.find_first_address(host, service, options)
-    local hints = ffi.new("addrinfo")
-    hints.ai_family = AF_INET
-    hints.ai_socktype = SOCK_STREAM
-    hints.ai_protocol = IPPROTO_TCP
+    local hints = ffi.new("addrinfo[1]")
+    hints[0].ai_family = AF_INET
+    hints[0].ai_socktype = SOCK_STREAM
+    hints[0].ai_protocol = IPPROTO_TCP
     
+    print("[EditCOPY ljsocket] hints:", tostring(hints))
     local res = ffi.new("addrinfo*[1]")
+    print("[EditCOPY ljsocket] out:", tostring(res))
     local status = ws2.getaddrinfo(host, tostring(service), hints, res)
     
     if status ~= 0 then
