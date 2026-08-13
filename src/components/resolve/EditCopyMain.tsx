@@ -5,12 +5,14 @@ import { Settings } from './Settings';
 import { Footer } from './Footer';
 import { ImageItem } from '@/types/resolve';
 import { toast } from 'sonner';
-import { pingResolve, getTimelineInfo } from '@/api/resolve-api';
+import { pingResolve, getTimelineInfo, applyImages } from '@/api/resolve-api';
+import { processClipboardImage } from '@/api/clipboard';
 
 export function EditCopyMain() {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [status, setStatus] = useState<'Connected' | 'Disconnected' | 'Connecting' | 'Error'>('Disconnected');
   const [resolveName, setResolveName] = useState<string>('');
+  const [isApplying, setIsApplying] = useState(false);
   const [settings, setSettings] = useState({
     duration: 5.0,
     mode: 'SEQUENCE' as const,
@@ -18,7 +20,6 @@ export function EditCopyMain() {
   });
 
   const checkConnection = useCallback(async () => {
-    setStatus('Connecting');
     try {
       const res = await pingResolve();
       if (res.ok) {
@@ -29,31 +30,38 @@ export function EditCopyMain() {
         }
       } else {
         setStatus('Disconnected');
-        toast.error("DaVinci Resolve não conectado", {
-          description: "Certifique-se que o script EditCOPY está rodando no Resolve."
-        });
       }
     } catch (e) {
-      setStatus('Error');
+      setStatus('Disconnected');
     }
   }, []);
 
   useEffect(() => {
     checkConnection();
-    const interval = setInterval(checkConnection, 30000);
+    const interval = setInterval(checkConnection, 10000);
     return () => clearInterval(interval);
   }, [checkConnection]);
 
-  const handlePaste = useCallback((e: ClipboardEvent) => {
-    // A ser implementado com o plugin de clipboard do Tauri
-    console.log('[EditCOPY] Paste detected');
-    toast.info("Imagem detectada no clipboard (Simulação)");
+  const handlePaste = useCallback(async () => {
+    const newImage = await processClipboardImage();
+    if (newImage) {
+      setImages(prev => [...prev, newImage]);
+      toast.success("Imagem adicionada à fila");
+    } else {
+      toast.error("O clipboard não contém uma imagem válida");
+    }
   }, []);
 
   useEffect(() => {
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        handlePaste();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handlePaste]);
+
 
   return (
     <div className="flex flex-col h-screen max-w-4xl mx-auto overflow-hidden border-x border-[#1A1A1A]">
@@ -78,16 +86,24 @@ export function EditCopyMain() {
 
       <Footer 
         status={status} 
-        onApply={() => toast.promise(
-          new Promise((resolve) => setTimeout(resolve, 2000)),
-          {
-            loading: 'Enviando para o Resolve...',
-            success: 'Imagens inseridas na timeline!',
-            error: 'Erro ao inserir imagens.'
+        onApply={async () => {
+          setIsApplying(true);
+          const paths = images.map(img => img.path);
+          const res = await applyImages(paths, settings.duration, settings.track);
+          
+          if (res.ok) {
+            toast.success("Imagens aplicadas com sucesso!");
+            setImages([]);
+          } else {
+            toast.error("Erro ao aplicar imagens", {
+              description: res.error
+            });
           }
-        )} 
-        canApply={images.length > 0 && status === 'Connected'}
+          setIsApplying(false);
+        }} 
+        canApply={images.length > 0 && status === 'Connected' && !isApplying}
       />
+
     </div>
   );
 }
